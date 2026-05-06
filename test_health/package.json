@@ -1,0 +1,12 @@
+{
+  "name": "stanblackjack-health-check",
+  "version": "1.0.0",
+  "description": "Deployment health checks for StanBlackJack",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}

@@ -27,7 +27,17 @@ jobs:
         with:
           channel: 'stable'
       - run: flutter pub get
-      - run: flutter build web --release
+      - name: Build Web (Dev)
+        if: github.ref == 'refs/heads/develop'
+        run: flutter build web --release --dart-define=ENVIRONMENT=dev
+
+      - name: Build Web (Staging)
+        if: github.ref == 'refs/heads/staging'
+        run: flutter build web --release --dart-define=ENVIRONMENT=stg
+
+      - name: Build Web (Production)
+        if: github.ref == 'refs/heads/main'
+        run: flutter build web --release --dart-define=ENVIRONMENT=prod
 
       - name: Deploy to Firebase Hosting (Dev)
         if: github.ref == 'refs/heads/develop'
@@ -71,3 +81,37 @@ jobs:
         with:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+  health_check:
+    needs: build_web
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          cd test_health
+          npm install
+          npx playwright install --with-deps chromium
+
+      - name: Run Dev Health Check
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          cd test_health
+          TEST_URL=https://stanblackjack-dev.web.app npm test
+
+      - name: Run Staging Health Check
+        if: github.ref == 'refs/heads/staging'
+        run: |
+          cd test_health
+          TEST_URL=https://stanblackjack-stg.web.app npm test
+
+      - name: Run Production Health Check
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cd test_health
+          TEST_URL=https://stanblackjack-prod.web.app npm test

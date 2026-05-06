@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/strategy_engine.dart';
-import '../../domain/entities/card.dart';
 
 class StrategyChart extends StatelessWidget {
   const StrategyChart({super.key});

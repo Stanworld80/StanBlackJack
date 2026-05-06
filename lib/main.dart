@@ -4,7 +4,14 @@ import 'presentation/pages/game_page.dart';
 import 'core/theme/app_colors.dart';
 import 'domain/repositories/stats_repository.dart';
 
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const StanBlackJackApp());
 }
 

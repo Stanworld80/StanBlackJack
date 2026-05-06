@@ -38,7 +38,7 @@ Future<void> setTestShoe(WidgetTester tester, List<CardEntity> cards) async {
   
   // Find the BuildContext from the app
   final BuildContext context = tester.element(find.byType(app.StanBlackJackApp));
-  context.read<BlackjackBloc>().add(SetShoeForTesting(cards: shoe));
+  context.read<BlackjackBloc>().add(SetShoeForTesting(shoe));
   await tester.pumpAndSettle();
 }
 

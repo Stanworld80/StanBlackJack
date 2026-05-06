@@ -34,16 +34,21 @@ class FirestoreStatsRepository implements StatsRepository {
 
   @override
   Future<Map<String, dynamic>> loadStats() async {
-    if (_uid == null) {
-      // Try to sign in anonymously if not signed in
-      await _auth.signInAnonymously();
-    }
+    try {
+      if (_uid == null) {
+        // Try to sign in anonymously if not signed in
+        await _auth.signInAnonymously();
+      }
 
-    if (_uid == null) return {};
+      if (_uid == null) return {};
 
-    final doc = await _firestore.collection('users').doc(_uid).get();
-    if (doc.exists) {
-      return doc.data() ?? {};
+      final doc = await _firestore.collection('users').doc(_uid).get();
+      if (doc.exists) {
+        return doc.data() ?? {};
+      }
+    } catch (e) {
+      // Return empty stats on error to allow app to function
+      return {};
     }
     return {};
   }

@@ -35,14 +35,19 @@ class BlackjackBloc extends Bloc<BlackjackEvent, BlackjackState> {
 
   Future<void> _onLoadStats(LoadStats event, Emitter<BlackjackState> emit) async {
     emit(state.copyWith(isLoading: true));
-    final stats = await statsRepository.loadStats();
-    emit(state.copyWith(
-      balance: stats['balance'] ?? 1000,
-      totalGames: stats['totalGames'] ?? 0,
-      totalMoves: stats['totalMoves'] ?? 0,
-      correctStrategyMoves: stats['correctStrategyMoves'] ?? 0,
-      isLoading: false,
-    ));
+    try {
+      final stats = await statsRepository.loadStats();
+      emit(state.copyWith(
+        balance: (stats['balance'] as num?)?.toInt() ?? 1000,
+        totalGames: (stats['totalGames'] as num?)?.toInt() ?? 0,
+        totalMoves: (stats['totalMoves'] as num?)?.toInt() ?? 0,
+        correctStrategyMoves: (stats['correctStrategyMoves'] as num?)?.toInt() ?? 0,
+        isLoading: false,
+      ));
+    } catch (e) {
+      // Fallback if load fails
+      emit(state.copyWith(isLoading: false));
+    }
   }
 
   void _onStartGame(StartGame event, Emitter<BlackjackState> emit) {

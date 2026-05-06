@@ -18,8 +18,9 @@ jobs:
       - run: flutter pub get
       - run: flutter test
 
-  build_web:
+  deploy_dev:
     needs: run_tests
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -27,20 +28,9 @@ jobs:
         with:
           channel: 'stable'
       - run: flutter pub get
-      - name: Build Web (Dev)
-        if: github.ref == 'refs/heads/develop'
-        run: flutter build web --release --dart-define=ENVIRONMENT=dev
-
-      - name: Build Web (Staging)
-        if: github.ref == 'refs/heads/staging'
-        run: flutter build web --release --dart-define=ENVIRONMENT=stg
-
-      - name: Build Web (Production)
-        if: github.ref == 'refs/heads/main'
-        run: flutter build web --release --dart-define=ENVIRONMENT=prod
-
+      - name: Build Web (Dev) - No Minify for Debugging
+        run: flutter build web --release --no-minify --dart-define=ENVIRONMENT=dev
       - name: Deploy to Firebase Hosting (Dev)
-        if: github.ref == 'refs/heads/develop'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
@@ -48,8 +38,37 @@ jobs:
           projectId: stanblackjack-dev
           channelId: live
 
+  health_check_dev:
+    needs: deploy_dev
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd test_health
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Run Dev Health Check
+        run: |
+          cd test_health
+          TEST_URL=https://stanblackjack-dev.web.app npm test
+
+  deploy_stg:
+    needs: run_tests
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      - run: flutter pub get
+      - name: Build Web (Staging)
+        run: flutter build web --release --dart-define=ENVIRONMENT=stg
       - name: Deploy to Firebase Hosting (Staging)
-        if: github.ref == 'refs/heads/staging'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
@@ -57,14 +76,61 @@ jobs:
           projectId: stanblackjack-stg
           channelId: live
 
+  health_check_stg:
+    needs: deploy_stg
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd test_health
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Run Staging Health Check
+        run: |
+          cd test_health
+          TEST_URL=https://stanblackjack-stg.web.app npm test
+
+  deploy_prod:
+    needs: run_tests
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      - run: flutter pub get
+      - name: Build Web (Production)
+        run: flutter build web --release --dart-define=ENVIRONMENT=prod
       - name: Deploy to Firebase Hosting (Production)
-        if: github.ref == 'refs/heads/main'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STANBLACKJACK_PROD }}'
           projectId: stanblackjack-prod
           channelId: live
+
+  health_check_prod:
+    needs: deploy_prod
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd test_health
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Run Production Health Check
+        run: |
+          cd test_health
+          TEST_URL=https://stanblackjack-prod.web.app npm test
 
   build_android:
     needs: run_tests
@@ -82,36 +148,3 @@ jobs:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-  health_check:
-    needs: build_web
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      
-      - name: Install dependencies
-        run: |
-          cd test_health
-          npm install
-          npx playwright install --with-deps chromium
-
-      - name: Run Dev Health Check
-        if: github.ref == 'refs/heads/develop'
-        run: |
-          cd test_health
-          TEST_URL=https://stanblackjack-dev.web.app npm test
-
-      - name: Run Staging Health Check
-        if: github.ref == 'refs/heads/staging'
-        run: |
-          cd test_health
-          TEST_URL=https://stanblackjack-stg.web.app npm test
-
-      - name: Run Production Health Check
-        if: github.ref == 'refs/heads/main'
-        run: |
-          cd test_health
-          TEST_URL=https://stanblackjack-prod.web.app npm test

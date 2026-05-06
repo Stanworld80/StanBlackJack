@@ -9,8 +9,12 @@ test('App loads and shows main game elements', async ({ page }) => {
   const errors = [];
   page.on('console', msg => {
     if (msg.type() === 'error') {
-      console.error(`PAGE ERROR: ${msg.text()}`);
-      errors.push(msg.text());
+      const text = msg.text();
+      // Ignore common benign errors (like analytics or missing assets)
+      if (!text.includes('favicon.ico') && !text.includes('chrome-extension')) {
+        console.error(`PAGE ERROR: ${text}`);
+        errors.push(text);
+      }
     }
   });
 
@@ -20,38 +24,53 @@ test('App loads and shows main game elements', async ({ page }) => {
   });
 
   // Navigate to the app
-  await page.goto(url);
+  await page.goto(url, { waitUntil: 'networkidle' });
 
-  // Wait for the app to initialize. Flutter web usually takes a bit.
-  // We look for a canvas or some indicator that it's not a grey screen.
-  await page.waitForLoadState('networkidle');
-
-  // Flutter apps render in a flt-glass-pane or have a canvas
-  const canvas = page.locator('canvas');
-  try {
-    await expect(canvas).toBeVisible({ timeout: 60000 });
-  } catch (e) {
-    if (errors.length > 0) {
-      throw new Error(`Canvas not visible and caught console errors: ${errors.join('\n')}`);
-    }
-    throw e;
-  }
-
-  // Check for the "StanBlackJack" title
+  // 1. Check for basic load
   const title = await page.title();
   expect(title).toContain('StanBlackJack');
-  
-  // Verify no critical errors occurred during load
-  // We allow some errors (like analytics blocking) but want to catch app crashes
-  const criticalErrors = errors.filter(err => 
-    err.includes('Firebase') || 
-    err.includes('Failed to load') || 
-    err.includes('Uncaught')
-  );
-  
-  if (criticalErrors.length > 0) {
-    console.warn('Potential critical errors detected in console:', criticalErrors);
+
+  // 2. Wait for the Flutter canvas
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible({ timeout: 30000 });
+
+  // 3. Detect "Grey Screen of Death"
+  // If the app crashed, the canvas might be present but empty or zero-sized
+  const box = await canvas.boundingBox();
+  expect(box.width).toBeGreaterThan(0);
+  expect(box.height).toBeGreaterThan(0);
+
+  // 4. Verify no critical errors occurred during load
+  if (errors.length > 0) {
+    const criticalErrors = errors.filter(err => 
+      err.includes('TypeError') || 
+      err.includes('ReferenceError') || 
+      err.includes('Uncaught') ||
+      err.includes('not a subtype')
+    );
+    if (criticalErrors.length > 0) {
+      throw new Error(`Critical errors detected in console:\n${criticalErrors.join('\n')}`);
+    }
   }
+
+  // 5. Wait for specific Game UI elements if possible (using semantics/aria-labels)
+  // Flutter web puts labels in flt-semantics or aria-label attributes
+  // Let's look for the "SOLDE" or "MISE" text which should appear after loading
+  await page.waitForTimeout(5000); // Give it a few seconds to initialize Firestore
+  
+  // Try to find the balance text
+  const balanceText = page.getByText(/SOLDE/i);
+  // Note: Flutter Web semantics can be flaky, so we don't strictly fail if text isn't found
+  // but we log it.
+  const isVisible = await balanceText.isVisible().catch(() => false);
+  if (isVisible) {
+    console.log('Balance text found - app seems fully functional!');
+  } else {
+    console.warn('Could not find balance text using selectors, but canvas is active.');
+  }
+
+  // Take a screenshot for the CI report
+  await page.screenshot({ path: 'test-results/health-check.png' });
 
   console.log('Health check passed!');
 });

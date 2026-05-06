@@ -16,13 +16,20 @@ class DefaultFirebaseOptions {
 
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      return environment == 'stg' ? stgWeb : devWeb;
+      switch (environment) {
+        case 'stg':
+          return stgWeb;
+        case 'prod':
+          return prodWeb;
+        default:
+          return devWeb;
+      }
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return environment == 'stg' ? stgAndroid : devAndroid;
+        return environment == 'stg' ? stgAndroid : (environment == 'prod' ? prodAndroid : devAndroid);
       case TargetPlatform.iOS:
-        return environment == 'stg' ? stgIOS : devIOS;
+        return environment == 'stg' ? stgIOS : (environment == 'prod' ? prodIOS : devIOS);
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',
@@ -48,9 +55,13 @@ class DefaultFirebaseOptions {
     storageBucket: 'stanblackjack-stg.firebasestorage.app',
   );
 
+  static const FirebaseOptions prodWeb = stgWeb; // Fallback to staging for now or update with real prod config
+
   // Placeholders for Android/iOS if needed later
-  static const FirebaseOptions devAndroid = devWeb; // Just as placeholders
+  static const FirebaseOptions devAndroid = devWeb; 
   static const FirebaseOptions devIOS = devWeb;
   static const FirebaseOptions stgAndroid = stgWeb;
   static const FirebaseOptions stgIOS = stgWeb;
+  static const FirebaseOptions prodAndroid = prodWeb;
+  static const FirebaseOptions prodIOS = prodWeb;
 }

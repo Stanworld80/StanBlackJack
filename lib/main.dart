@@ -8,11 +8,22 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(const StanBlackJackApp());
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // Disable runtime fetching if it's causing issues in some environments
+    // GoogleFonts.config.allowRuntimeFetching = true; 
+
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    runApp(const StanBlackJackApp());
+  } catch (e, stack) {
+    debugPrint('Fatal error during initialization: $e');
+    debugPrint(stack.toString());
+    // Run app anyway with basic settings if possible
+    runApp(const StanBlackJackApp());
+  }
 }
 
 class StanBlackJackApp extends StatelessWidget {
@@ -22,6 +33,16 @@ class StanBlackJackApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final darkTheme = ThemeData.dark();
+    
+    TextTheme textTheme;
+    try {
+      textTheme = GoogleFonts.outfitTextTheme(darkTheme.textTheme);
+    } catch (e) {
+      debugPrint('GoogleFonts failed, using default text theme: $e');
+      textTheme = darkTheme.textTheme;
+    }
+
     return MaterialApp(
       title: 'StanBlackJack',
       debugShowCheckedModeBanner: false,
@@ -29,7 +50,7 @@ class StanBlackJackApp extends StatelessWidget {
         brightness: Brightness.dark,
         primaryColor: AppColors.tableGreen,
         scaffoldBackgroundColor: AppColors.background,
-        textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
+        textTheme: textTheme,
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.tableGreen,
           brightness: Brightness.dark,

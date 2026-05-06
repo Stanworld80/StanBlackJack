@@ -92,7 +92,7 @@ class BlackjackBloc extends Bloc<BlackjackEvent, BlackjackState> {
     }
 
     List<CardEntity> shoe = List.from(state.shoe);
-    if (shoe.length < 10) {
+    if (shoe.length < 4) {
       add(StartGame(decksCount: state.decksCount));
       return;
     }

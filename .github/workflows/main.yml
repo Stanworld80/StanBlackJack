@@ -34,7 +34,7 @@ jobs:
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAN_BLACKJACK_DEV }}'
+          firebaseServiceAccount: '${{ secrets.x }}'
           projectId: stan-blackjack-dev
           channelId: live
 

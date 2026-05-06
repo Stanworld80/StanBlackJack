@@ -145,10 +145,12 @@ class GameView extends StatelessWidget {
 
               // Payout Animation
               if (state.status == GameStatus.gameOver && state.lastPayout > 0)
-                PayoutAnimation(
-                  visible: true,
-                  amount: state.lastPayout,
-                  onComplete: () {},
+                IgnorePointer(
+                  child: PayoutAnimation(
+                    visible: true,
+                    amount: state.lastPayout,
+                    onComplete: () {},
+                  ),
                 ),
             ],
           );
